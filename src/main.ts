@@ -77,6 +77,15 @@ const renderSaveSlots = (slots: SaveSlot[]) => {
   });
 };
 
+const openSaveMenu = () => {
+  overlay.hidden = true;
+  stagePicker.hidden = true;
+  nameForm.hidden = true;
+  editingSlotId = null;
+  renderSaveSlots(loadLocalSlots());
+  picker.hidden = false;
+};
+
 const confirmSlotName = () => {
   const name = nameInput.value.trim();
   if (!editingSlotId || !name) { nameInput.focus(); return; }
@@ -112,7 +121,9 @@ const renderStagePicker = () => {
   });
 };
 document.querySelector('#stage-select')!.addEventListener('click', () => { renderStagePicker(); stagePicker.hidden = false; });
+document.querySelector('#menu')!.addEventListener('click', openSaveMenu);
 document.querySelector('#back-to-stages')!.addEventListener('click', () => { overlay.hidden = true; renderStagePicker(); stagePicker.hidden = false; });
+document.querySelector('#stage-picker-menu')!.addEventListener('click', openSaveMenu);
 document.querySelector('#close-stage-picker')!.addEventListener('click', () => { stagePicker.hidden = true; });
 
 document.querySelector('#reset')!.addEventListener('click', () => { overlay.hidden = true; document.dispatchEvent(new Event('maze:reset')); });
