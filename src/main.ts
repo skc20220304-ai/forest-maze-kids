@@ -6,6 +6,7 @@ import { getActiveSlotId, loadLocalSlots, loadLocalProgress, saveLocalProgress, 
 import { firebaseEnabled, auth, signIn, signUp, saveCloudSlots, syncSlots, watchUser } from './persistence/cloudProgress';
 import { GameScene } from './game/GameScene';
 import { stages } from './stages/stages';
+import { isMuted, playSound, toggleMute, unlockAudio } from './audio';
 
 const stars = document.querySelector('#stars')!;
 const stageLabel = document.querySelector('#stage')!;
@@ -21,12 +22,18 @@ const stageList = document.querySelector('#stage-list') as HTMLElement;
 const activeSlotId = { value: getActiveSlotId() };
 let editingSlotId: string | null = null;
 let current: GameState | null = null;
+const soundToggle = document.querySelector('#sound-toggle') as HTMLButtonElement;
 
 const game = new Phaser.Game({ type: Phaser.CANVAS, parent: 'game-container', backgroundColor: '#eaf6d8', scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, width: 540, height: 540 }, scene: [GameScene], render: { antialias: true, pixelArt: false } });
 
 const emitMove = (direction: Direction) => document.dispatchEvent(new CustomEvent('maze:move', { detail: direction }));
+const updateSoundButton = () => { soundToggle.textContent = isMuted() ? '🔇' : '🔊'; soundToggle.setAttribute('aria-label', isMuted() ? '音をオンにする' : '音をオフにする'); };
+updateSoundButton();
+document.addEventListener('pointerdown', unlockAudio, { once: true });
+document.addEventListener('keydown', unlockAudio, { once: true });
+soundToggle.addEventListener('click', () => { toggleMute(); updateSoundButton(); });
 document.querySelectorAll<HTMLButtonElement>('[data-direction]').forEach((button) => {
-  button.addEventListener('pointerdown', (event) => { event.preventDefault(); button.classList.add('pressed'); emitMove(button.dataset.direction as Direction); });
+  button.addEventListener('pointerdown', (event) => { event.preventDefault(); unlockAudio(); button.classList.add('pressed'); playSound('move'); emitMove(button.dataset.direction as Direction); });
   ['pointerup', 'pointercancel', 'pointerleave'].forEach((name) => button.addEventListener(name, () => button.classList.remove('pressed')));
 });
 document.addEventListener('keydown', (event) => { if (event.repeat) return; const map: Record<string, Direction> = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' }; if (map[event.key]) { event.preventDefault(); emitMove(map[event.key]); } });
@@ -107,7 +114,11 @@ document.querySelector('#close-stage-picker')!.addEventListener('click', () => {
 
 document.querySelector('#reset')!.addEventListener('click', () => { overlay.hidden = true; document.dispatchEvent(new Event('maze:reset')); });
 document.addEventListener('maze:state', (event) => {
+  const previous = current;
   current = (event as CustomEvent<GameState>).detail;
+  if (current.phase === 'blocked') playSound('blocked');
+  if (previous && current.collectedStars.size > previous.collectedStars.size) playSound('star');
+  if (current.phase === 'stageClear' && previous?.phase !== 'stageClear') playSound('goal');
   const total = stages.find((stage) => stage.id === current!.stageId)?.stars.length ?? 3;
   stars.textContent = `⭐ ${current.collectedStars.size} / ${total}`;
   stageLabel.textContent = `ステージ ${current.stageId}`;
