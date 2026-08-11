@@ -4,11 +4,11 @@ import { validateStage } from '../domain/maze';
 // Authored layouts. Each stage is intentionally stored as data so its shape can be reviewed
 // independently instead of being produced by one repeated runtime generator.
 export const stages: readonly StageDefinition[] = [
- {id:1,rows:5,columns:5,layout:['S..##','##.##','.....','##..#','####G'],playerStart:{row:0,col:0},goal:{row:4,col:4},stars:[{row:0,col:1},{row:2,col:0},{row:3,col:2}]},
+ {id:1,rows:5,columns:5,layout:['S..##','##.##','.....','##...','####G'],playerStart:{row:0,col:0},goal:{row:4,col:4},stars:[{row:0,col:1},{row:2,col:0},{row:3,col:2}]},
  {id:2,rows:6,columns:6,layout:['##G###','...#.#','.#...#','.#.###','S....#','######'],playerStart:{row:4,col:0},goal:{row:0,col:2},stars:[{row:3,col:2},{row:2,col:4},{row:1,col:1}]},
  {id:3,rows:6,columns:6,layout:['###G##','#...##','#.#.##','#.#.##','#S...#','######'],playerStart:{row:4,col:1},goal:{row:0,col:3},stars:[{row:4,col:2},{row:2,col:3},{row:1,col:1}]},
- {id:4,rows:7,columns:7,layout:['###G###','...#..#','.#.#.##','.#...##','S..#..#','###...#','#######'],playerStart:{row:4,col:0},goal:{row:0,col:3},stars:[{row:4,col:2},{row:3,col:3},{row:1,col:1}]},
- {id:5,rows:7,columns:7,layout:['#######','#G....#','###.#.#','#...#.#','#.#...#','#S#####','#######'],playerStart:{row:5,col:1},goal:{row:1,col:1},stars:[{row:4,col:2},{row:3,col:3},{row:1,col:4}]},
+ {id:4,rows:6,columns:7,layout:['###G###','....#.#','.#...##','.#...##','S..#..#','#######'],playerStart:{row:4,col:0},goal:{row:0,col:3},stars:[{row:4,col:2},{row:3,col:3},{row:1,col:1}]},
+ {id:5,rows:7,columns:7,layout:['#######','#G#####','#.....#','###.#.#','#...#.#','#S#####','#######'],playerStart:{row:5,col:1},goal:{row:1,col:1},stars:[{row:4,col:2},{row:2,col:2},{row:2,col:5}]},
  {id:6,rows:7,columns:7,layout:['#######','#S..#G#','###.#.#','#.#...#','#.###.#','#.....#','#######'],playerStart:{row:1,col:1},goal:{row:1,col:5},stars:[{row:1,col:3},{row:4,col:5},{row:1,col:2}]},
  {id:7,rows:8,columns:8,layout:['########','#....S##','#.######','#...#.##','###.#.##','#G....##','########','########'],playerStart:{row:1,col:5},goal:{row:5,col:1},stars:[{row:1,col:2},{row:5,col:4},{row:1,col:4}]},
  {id:8,rows:8,columns:8,layout:['########','#....G##','#.#.####','#.#...##','#####.##','#S....##','########','########'],playerStart:{row:5,col:1},goal:{row:1,col:5},stars:[{row:5,col:4},{row:1,col:2},{row:5,col:2}]},
