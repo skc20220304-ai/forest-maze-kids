@@ -1,7 +1,7 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, type User } from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
-import { emptySaveSlots, normalizeSaveSlots, type SaveSlot } from './localProgress';
+import { emptySaveSlots, normalizeSaveSlots, type SaveSlot, type StageScore } from './localProgress';
 
 const env = import.meta.env;
 const config = { apiKey: env.VITE_FIREBASE_API_KEY, authDomain: env.VITE_FIREBASE_AUTH_DOMAIN, projectId: env.VITE_FIREBASE_PROJECT_ID, storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET, messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID, appId: env.VITE_FIREBASE_APP_ID };
@@ -21,7 +21,7 @@ export async function loadCloudSlots(): Promise<SaveSlot[] | null> {
   const data = snapshot.data();
   if (data.slots) return normalizeSaveSlots(Object.values(data.slots));
   const slots = emptySaveSlots();
-  if (Number.isInteger(data.highestStage)) { slots[0].name = 'データ1'; slots[0].highestStage = Math.max(1, Math.min(5, Number(data.highestStage))); }
+  if (Number.isInteger(data.highestStage)) { slots[0].name = 'データ1'; slots[0].highestStage = Math.max(1, Math.min(30, Number(data.highestStage))); }
   return slots;
 }
 
@@ -36,9 +36,20 @@ export async function saveCloudSlots(slots: SaveSlot[]) {
 export async function syncSlots(localSlots: SaveSlot[]) {
   const remoteSlots = await loadCloudSlots();
   if (!remoteSlots) { await saveCloudSlots(localSlots); return normalizeSaveSlots(localSlots); }
+  const mergeScores = (local: Record<string, StageScore>, remote: Record<string, StageScore>) => {
+    const keys = new Set([...Object.keys(local), ...Object.keys(remote)]);
+    return Object.fromEntries([...keys].map((key) => {
+      const left = local[key]; const right = remote[key];
+      if (!left) return [key, right]; if (!right) return [key, left];
+      return [key, { stars: Math.max(left.stars, right.stars), bestTimeMs: Math.min(left.bestTimeMs, right.bestTimeMs), completedAt: left.completedAt && right.completedAt ? (left.completedAt > right.completedAt ? left.completedAt : right.completedAt) : left.completedAt ?? right.completedAt }];
+    }));
+  };
   const merged = normalizeSaveSlots(localSlots).map((local, index) => {
     const remote = remoteSlots[index];
-    return { ...local, name: remote.name || local.name, highestStage: Math.max(local.highestStage, remote.highestStage), updatedAt: remote.updatedAt ?? local.updatedAt };
+    const localIsNewer = (local.updatedAt ?? '') >= (remote.updatedAt ?? '');
+    if (!local.name && localIsNewer) return local;
+    if (!remote.name && !localIsNewer) return remote;
+    return { ...local, name: remote.name || local.name, highestStage: Math.max(local.highestStage, remote.highestStage), scores: mergeScores(local.scores, remote.scores), updatedAt: remote.updatedAt ?? local.updatedAt };
   });
   await saveCloudSlots(merged);
   return merged;

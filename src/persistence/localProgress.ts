@@ -1,8 +1,10 @@
 export const MAX_SAVE_SLOTS = 3;
+export interface StageScore { stars: number; bestTimeMs: number; completedAt?: string }
 export interface SaveSlot {
   id: string;
   name: string;
   highestStage: number;
+  scores: Record<string, StageScore>;
   updatedAt?: string;
 }
 
@@ -16,7 +18,21 @@ const clampStage = (value: unknown) => {
 };
 
 export function emptySaveSlots(): SaveSlot[] {
-  return Array.from({ length: MAX_SAVE_SLOTS }, (_, index) => ({ id: `slot-${index + 1}`, name: '', highestStage: 1 }));
+  return Array.from({ length: MAX_SAVE_SLOTS }, (_, index) => ({ id: `slot-${index + 1}`, name: '', highestStage: 1, scores: {} }));
+}
+
+function normalizeScores(value: unknown): Record<string, StageScore> {
+  if (!value || typeof value !== 'object') return {};
+  return Object.entries(value as Record<string, unknown>).reduce<Record<string, StageScore>>((scores, [stageId, raw]) => {
+    const stage = clampStage(stageId);
+    if (String(stage) !== stageId) return scores;
+    const candidate = raw as Partial<StageScore>;
+    const stars = Number(candidate?.stars);
+    const bestTimeMs = Number(candidate?.bestTimeMs);
+    if (!Number.isInteger(stars) || stars < 0 || stars > 3 || !Number.isFinite(bestTimeMs) || bestTimeMs < 0) return scores;
+    scores[stageId] = { stars, bestTimeMs: Math.round(bestTimeMs), ...(typeof candidate?.completedAt === 'string' ? { completedAt: candidate.completedAt } : {}) };
+    return scores;
+  }, {});
 }
 
 export function normalizeSaveSlots(value: unknown): SaveSlot[] {
@@ -28,6 +44,7 @@ export function normalizeSaveSlots(value: unknown): SaveSlot[] {
       id: slot.id,
       name: typeof candidate?.name === 'string' ? candidate.name.trim().slice(0, 24) : '',
       highestStage: clampStage(candidate?.highestStage),
+      scores: normalizeScores(candidate?.scores),
       ...(updatedAt ? { updatedAt } : {}),
     };
   });
@@ -75,4 +92,30 @@ export function saveLocalProgress(stage: number, slotId = getActiveSlotId() ?? '
     slot.updatedAt = new Date().toISOString();
     saveLocalSlots(slots);
   }
+}
+
+export function saveStageScore(stage: number, stars: number, elapsedMs: number, slotId = getActiveSlotId() ?? 'slot-1') {
+  const slots = loadLocalSlots();
+  const slot = slots.find((item) => item.id === slotId);
+  if (!slot) return;
+  const stageId = String(clampStage(stage));
+  const current = slot.scores[stageId];
+  const nextStars = Math.max(current?.stars ?? 0, Math.max(0, Math.min(3, Math.round(stars))));
+  const roundedTime = Math.max(0, Math.round(elapsedMs));
+  const bestTimeMs = current ? Math.min(current.bestTimeMs, roundedTime) : roundedTime;
+  slot.scores[stageId] = { stars: nextStars, bestTimeMs, completedAt: new Date().toISOString() };
+  slot.updatedAt = new Date().toISOString();
+  saveLocalSlots(slots);
+}
+
+export function deleteSaveSlot(slotId: string) {
+  const slots = loadLocalSlots();
+  const index = slots.findIndex((slot) => slot.id === slotId);
+  if (index < 0) return slots;
+  const replacement = emptySaveSlots()[index];
+  replacement.updatedAt = new Date().toISOString();
+  slots[index] = replacement;
+  if (getActiveSlotId() === slotId) localStorage.removeItem(ACTIVE_SLOT_KEY);
+  saveLocalSlots(slots);
+  return slots;
 }

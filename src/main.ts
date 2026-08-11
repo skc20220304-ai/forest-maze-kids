@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import './styles.css';
 import './parent.css';
 import type { Direction, GameState } from './domain/types';
-import { getActiveSlotId, loadLocalSlots, loadLocalProgress, saveLocalProgress, saveLocalSlots, setActiveSlotId, type SaveSlot } from './persistence/localProgress';
+import { deleteSaveSlot, getActiveSlotId, loadLocalSlots, saveLocalProgress, saveLocalSlots, saveStageScore, setActiveSlotId, type SaveSlot } from './persistence/localProgress';
 import { firebaseEnabled, auth, signIn, signUp, saveCloudSlots, syncSlots, watchUser } from './persistence/cloudProgress';
 import { GameScene } from './game/GameScene';
 import { stages } from './stages/stages';
@@ -19,12 +19,18 @@ const nameForm = document.querySelector('#save-name-form') as HTMLElement;
 const nameInput = document.querySelector('#save-name') as HTMLInputElement;
 const stagePicker = document.querySelector('#stage-picker') as HTMLElement;
 const stageList = document.querySelector('#stage-list') as HTMLElement;
+const scoreBoard = document.querySelector('#score-board') as HTMLElement;
+const scoreSummary = document.querySelector('#score-summary') as HTMLElement;
+const scoreList = document.querySelector('#score-list') as HTMLElement;
 const activeSlotId = { value: getActiveSlotId() };
 let editingSlotId: string | null = null;
 let current: GameState | null = null;
+let stageStartedAt = Date.now();
 const soundToggle = document.querySelector('#sound-toggle') as HTMLButtonElement;
 
 const game = new Phaser.Game({ type: Phaser.CANVAS, parent: 'game-container', backgroundColor: '#eaf6d8', scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, width: 540, height: 540 }, scene: [GameScene], render: { antialias: true, pixelArt: false } });
+
+const loadStage = (stageId: number) => { stageStartedAt = Date.now(); (game.scene.getScene('game') as GameScene).loadStage(stageId); };
 
 const emitMove = (direction: Direction) => document.dispatchEvent(new CustomEvent('maze:move', { detail: direction }));
 const updateSoundButton = () => { soundToggle.textContent = isMuted() ? '🔇' : '🔊'; soundToggle.setAttribute('aria-label', isMuted() ? '音をオンにする' : '音をオフにする'); };
@@ -43,7 +49,7 @@ const chooseSlot = (slot: SaveSlot) => {
   setActiveSlotId(slot.id);
   picker.hidden = true;
   nameForm.hidden = true;
-  (game.scene.getScene('game') as GameScene).loadStage(slot.highestStage);
+  loadStage(slot.highestStage);
 };
 
 const openNameForm = (slotId: string) => {
@@ -72,6 +78,18 @@ const renderSaveSlots = (slots: SaveSlot[]) => {
       rename.textContent = 'なまえをかえる';
       rename.addEventListener('click', () => openNameForm(slot.id));
       row.append(rename);
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'rename-slot delete-slot';
+      remove.textContent = 'けす';
+      remove.addEventListener('click', () => {
+        if (!window.confirm(`「${slot.name}」のデータをけしますか？`)) return;
+        const slotsAfterDelete = deleteSaveSlot(slot.id);
+        void saveCloudSlots(slotsAfterDelete).catch(() => undefined);
+        activeSlotId.value = getActiveSlotId();
+        renderSaveSlots(slotsAfterDelete);
+      });
+      row.append(remove);
     }
     slotsElement.append(row);
   });
@@ -80,6 +98,7 @@ const renderSaveSlots = (slots: SaveSlot[]) => {
 const openSaveMenu = () => {
   overlay.hidden = true;
   stagePicker.hidden = true;
+  scoreBoard.hidden = true;
   nameForm.hidden = true;
   editingSlotId = null;
   renderSaveSlots(loadLocalSlots());
@@ -116,7 +135,7 @@ const renderStagePicker = () => {
     button.className = 'stage-choice';
     button.disabled = stage.id > highestStage;
     button.textContent = stage.id <= highestStage ? `ステージ ${stage.id}` : `🔒 ステージ ${stage.id}`;
-    button.addEventListener('click', () => { stagePicker.hidden = true; overlay.hidden = true; (game.scene.getScene('game') as GameScene).loadStage(stage.id); });
+    button.addEventListener('click', () => { stagePicker.hidden = true; overlay.hidden = true; loadStage(stage.id); });
     stageList.append(button);
   });
 };
@@ -125,6 +144,28 @@ document.querySelector('#menu')!.addEventListener('click', openSaveMenu);
 document.querySelector('#back-to-stages')!.addEventListener('click', () => { overlay.hidden = true; renderStagePicker(); stagePicker.hidden = false; });
 document.querySelector('#stage-picker-menu')!.addEventListener('click', openSaveMenu);
 document.querySelector('#close-stage-picker')!.addEventListener('click', () => { stagePicker.hidden = true; });
+
+const formatTime = (timeMs: number) => {
+  const seconds = Math.floor(timeMs / 1000); const minutes = Math.floor(seconds / 60);
+  return `${minutes}:${String(seconds % 60).padStart(2, '0')}`;
+};
+const renderScores = () => {
+  const slot = loadLocalSlots().find((item) => item.id === activeSlotId.value);
+  if (!slot?.name) { openSaveMenu(); return; }
+  const scoreValues = Object.values(slot.scores);
+  const totalStars = scoreValues.reduce((sum, score) => sum + score.stars, 0);
+  scoreSummary.textContent = `${slot.name}　クリア ${scoreValues.length} / ${stages.length}　⭐ ${totalStars} / ${stages.length * 3}`;
+  scoreList.replaceChildren();
+  stages.forEach((stage) => {
+    const score = slot.scores[String(stage.id)];
+    const row = document.createElement('div'); row.className = `score-row${score ? '' : ' locked'}`;
+    row.innerHTML = `<strong>ステージ ${stage.id}</strong><small>${score ? `⭐ ${score.stars} / 3　⏱ ${formatTime(score.bestTimeMs)}` : 'まだクリアしていないよ'}</small>`;
+    scoreList.append(row);
+  });
+  scoreBoard.hidden = false;
+};
+document.querySelector('#scores')!.addEventListener('click', renderScores);
+document.querySelector('#close-scores')!.addEventListener('click', () => { scoreBoard.hidden = true; });
 
 document.querySelector('#reset')!.addEventListener('click', () => { overlay.hidden = true; document.dispatchEvent(new Event('maze:reset')); });
 document.addEventListener('maze:state', (event) => {
@@ -138,15 +179,27 @@ document.addEventListener('maze:state', (event) => {
   stageLabel.textContent = `ステージ ${current.stageId}`;
   if (current.phase === 'stageClear') {
     saveLocalProgress(current.stageId, activeSlotId.value ?? undefined);
+    saveStageScore(current.stageId, current.collectedStars.size, Date.now() - stageStartedAt, activeSlotId.value ?? undefined);
     void saveCloudSlots(loadLocalSlots()).catch(() => undefined);
     overlay.hidden = false;
     title.textContent = current.stageId === stages.length ? '🎉 ぜんぶクリア！ ✨' : '🎉 やったー！ ✨';
     next.hidden = current.stageId === stages.length;
   }
 });
-next.addEventListener('click', () => { if (!current || current.stageId >= stages.length) return; saveLocalProgress(current.stageId + 1, activeSlotId.value ?? undefined); overlay.hidden = true; (game.scene.getScene('game') as GameScene).loadStage(current.stageId + 1); });
+next.addEventListener('click', () => { if (!current || current.stageId >= stages.length) return; saveLocalProgress(current.stageId + 1, activeSlotId.value ?? undefined); overlay.hidden = true; loadStage(current.stageId + 1); });
 
 renderSaveSlots(loadLocalSlots());
+let resumeAttempts = 0;
+const resumeActiveSave = () => {
+  const slot = loadLocalSlots().find((item) => item.id === activeSlotId.value);
+  if (!slot?.name) return;
+  if (!game.scene.isActive('game')) {
+    if (resumeAttempts++ < 20) window.setTimeout(resumeActiveSave, 50);
+    return;
+  }
+  chooseSlot(slot);
+};
+window.setTimeout(resumeActiveSave, 0);
 const syncOnLogin = async () => {
   if (!auth?.currentUser) return;
   try {
@@ -154,7 +207,7 @@ const syncOnLogin = async () => {
     saveLocalSlots(slots);
     renderSaveSlots(slots);
     const selected = slots.find((slot) => slot.id === activeSlotId.value);
-    if (selected) (game.scene.getScene('game') as GameScene).loadStage(selected.highestStage);
+    if (selected) loadStage(selected.highestStage);
   } catch {
     // The local slots remain playable when the network or Firebase is temporarily unavailable.
   }
