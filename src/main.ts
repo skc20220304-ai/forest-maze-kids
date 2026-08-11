@@ -86,7 +86,7 @@ const confirmSlotName = () => {
   slot.name = name.slice(0, 24);
   slot.updatedAt = new Date().toISOString();
   saveLocalSlots(slots);
-  void saveCloudSlots(slots);
+  void saveCloudSlots(slots).catch(() => undefined);
   renderSaveSlots(slots);
   nameForm.hidden = true;
   chooseSlot(slot);
@@ -127,7 +127,7 @@ document.addEventListener('maze:state', (event) => {
   stageLabel.textContent = `ステージ ${current.stageId}`;
   if (current.phase === 'stageClear') {
     saveLocalProgress(current.stageId, activeSlotId.value ?? undefined);
-    void saveCloudSlots(loadLocalSlots());
+    void saveCloudSlots(loadLocalSlots()).catch(() => undefined);
     overlay.hidden = false;
     title.textContent = current.stageId === 10 ? '🎉 ぜんぶクリア！ ✨' : '🎉 やったー！ ✨';
     next.hidden = current.stageId === 10;
@@ -138,11 +138,15 @@ next.addEventListener('click', () => { if (!current || current.stageId >= 10) re
 renderSaveSlots(loadLocalSlots());
 const syncOnLogin = async () => {
   if (!auth?.currentUser) return;
-  const slots = await syncSlots(loadLocalSlots());
-  saveLocalSlots(slots);
-  renderSaveSlots(slots);
-  const selected = slots.find((slot) => slot.id === activeSlotId.value);
-  if (selected) (game.scene.getScene('game') as GameScene).loadStage(selected.highestStage);
+  try {
+    const slots = await syncSlots(loadLocalSlots());
+    saveLocalSlots(slots);
+    renderSaveSlots(slots);
+    const selected = slots.find((slot) => slot.id === activeSlotId.value);
+    if (selected) (game.scene.getScene('game') as GameScene).loadStage(selected.highestStage);
+  } catch {
+    // The local slots remain playable when the network or Firebase is temporarily unavailable.
+  }
 };
 watchUser((user) => { if (user) void syncOnLogin(); });
 
