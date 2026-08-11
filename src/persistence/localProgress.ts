@@ -1,0 +1,1 @@
+const KEY='forest-maze:stage'; export function loadLocalProgress(){const n=Number(localStorage.getItem(KEY));return Number.isInteger(n)&&n>=1&&n<=5?n:1} export function saveLocalProgress(n:number){localStorage.setItem(KEY,String(Math.max(1,Math.min(5,n))))}

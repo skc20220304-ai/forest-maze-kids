@@ -1,0 +1,5 @@
+import type { Direction, Position, StageDefinition } from './types';
+const delta: Record<Direction, Position>={up:{row:-1,col:0},down:{row:1,col:0},left:{row:0,col:-1},right:{row:0,col:1}};
+export function canMove(stage:StageDefinition,p:Position,d:Direction){const n={row:p.row+delta[d].row,col:p.col+delta[d].col};return n.row>=0&&n.row<stage.rows&&n.col>=0&&n.col<stage.columns&&stage.layout[n.row][n.col]!=='#'}
+export function nextPosition(p:Position,d:Direction){return {row:p.row+delta[d].row,col:p.col+delta[d].col}}
+export function validateStage(stage:StageDefinition){if(stage.layout.length!==stage.rows||stage.layout.some(x=>x.length!==stage.columns))return false;const q=[stage.playerStart],seen=new Set([`${stage.playerStart.row}:${stage.playerStart.col}`]),ds:Direction[]=['up','down','left','right'];while(q.length){const p=q.shift()!;for(const d of ds)if(canMove(stage,p,d)){const n=nextPosition(p,d),k=`${n.row}:${n.col}`;if(!seen.has(k)){seen.add(k);q.push(n)}}}return seen.has(`${stage.goal.row}:${stage.goal.col}`)&&stage.stars.every(s=>seen.has(`${s.row}:${s.col}`))}

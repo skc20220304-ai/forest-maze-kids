@@ -1,0 +1,2 @@
+import {describe,expect,it} from 'vitest';import {stages} from '../src/stages/stages';import {validateStage} from '../src/domain/maze';import {initialState,move} from '../src/domain/reducer';
+describe('maze',()=>{it('validates every stage',()=>stages.forEach(s=>expect(validateStage(s)).toBe(true)));it('moves and blocks',()=>{const s=stages[0],state=initialState(s);expect(move(state,s,'right').moved).toBe(true);expect(move(state,s,'up').moved).toBe(false)})});
