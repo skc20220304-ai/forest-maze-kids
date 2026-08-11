@@ -77,7 +77,7 @@ const renderSaveSlots = (slots: SaveSlot[]) => {
   });
 };
 
-document.querySelector('#save-name-ok')!.addEventListener('click', () => {
+const confirmSlotName = () => {
   const name = nameInput.value.trim();
   if (!editingSlotId || !name) { nameInput.focus(); return; }
   const slots = loadLocalSlots();
@@ -91,7 +91,10 @@ document.querySelector('#save-name-ok')!.addEventListener('click', () => {
   nameForm.hidden = true;
   chooseSlot(slot);
   editingSlotId = null;
-});
+};
+const saveNameButton = document.querySelector('#save-name-ok') as HTMLButtonElement;
+saveNameButton.addEventListener('pointerup', (event) => { event.preventDefault(); confirmSlotName(); }, { capture: true });
+saveNameButton.addEventListener('click', (event) => { event.preventDefault(); confirmSlotName(); });
 document.querySelector('#save-name-cancel')!.addEventListener('click', () => { nameForm.hidden = true; editingSlotId = null; });
 
 const renderStagePicker = () => {
