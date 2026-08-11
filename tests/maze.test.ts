@@ -2,6 +2,7 @@ import {describe,expect,it} from 'vitest';import {stages} from '../src/stages/st
 describe('maze safety',()=>{
   it('validates every stage and keeps IDs unique',()=>{
     expect(stages.map(stage=>stage.id)).toEqual(Array.from({length:30},(_,index)=>index+1));
+    expect(new Set(stages.slice(5).map(stage=>stage.layout.join('|'))).size).toBe(25);
     stages.forEach(stage=>expect(validateStage(stage),`stage ${stage.id} must be winnable`).toBe(true));
   });
   it('rejects malformed or unreachable stage data',()=>{

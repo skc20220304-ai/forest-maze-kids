@@ -20,15 +20,30 @@ function makeChallengeStage(id: StageId, size: number): StageDefinition {
   const directions = [[-2,0],[2,0],[0,-2],[0,2]] as const;
   while (stack.length) {
     const current = stack[stack.length - 1];
+    const style = id % 4;
     const options = directions
       .map(([dr, dc]) => ({ dr, dc, row: current.row + dr, col: current.col + dc }))
       .filter(next => next.row > 0 && next.row < size - 1 && next.col > 0 && next.col < size - 1 && grid[next.row][next.col] === '#')
-      .sort(() => random() - 0.5);
+      .sort((a, b) => {
+        const aBias = style === 1 ? (a.dr === 0 ? -0.35 : 0) : style === 2 ? (a.dc === 0 ? -0.35 : 0) : 0;
+        const bBias = style === 1 ? (b.dr === 0 ? -0.35 : 0) : style === 2 ? (b.dc === 0 ? -0.35 : 0) : 0;
+        return random() + aBias - (random() + bBias);
+      });
     if (!options.length) { stack.pop(); continue; }
     const next = options[0];
     grid[current.row + next.dr / 2][current.col + next.dc / 2] = '.';
     grid[next.row][next.col] = '.';
     stack.push({ row: next.row, col: next.col });
+  }
+  // Two later styles deliberately add broad garden paths so the visual rhythm
+  // differs from the narrow, winding stages instead of repeating one pattern.
+  if (id % 4 === 2) {
+    const row = 2 + (id % (size - 3));
+    for (let col = 1; col < size - 1; col += 2) grid[row][col] = '.';
+  }
+  if (id % 4 === 3) {
+    const col = 2 + (id % (size - 3));
+    for (let row = 1; row < size - 1; row += 2) grid[row][col] = '.';
   }
   const goal = { row: size - 2, col: size - 2 };
   grid[start.row][start.col] = 'S';
@@ -42,7 +57,8 @@ function makeChallengeStage(id: StageId, size: number): StageDefinition {
 
 const challengeStages = Array.from({ length: 25 }, (_, index) => {
   const id = (index + 6) as StageId;
-  const size = id <= 10 ? 11 : id <= 20 ? 13 : 15;
+  const sizePlan = [11,13,11,15,13,15,11,13,15,13,15,11,15,13,11,15,13,11,15,13,11,15,13,15,13];
+  const size = sizePlan[index];
   return makeChallengeStage(id, size);
 });
 
