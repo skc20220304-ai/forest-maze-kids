@@ -1,69 +1,40 @@
-import type { StageDefinition, StageId, Position } from '../domain/types';
+import type { StageDefinition, StageId } from '../domain/types';
 import { validateStage } from '../domain/maze';
 
-const starterStages: StageDefinition[] = [
- {id:1,rows:5,columns:5,layout:['S....','.##..','...#.','.#...','....G'],playerStart:{row:0,col:0},goal:{row:4,col:4},stars:[{row:0,col:2}]},
- {id:2,rows:6,columns:6,layout:['S.....','.##...','...#..','.##...','....#.','.....G'],playerStart:{row:0,col:0},goal:{row:5,col:5},stars:[{row:0,col:2},{row:4,col:2}]},
- {id:3,rows:7,columns:7,layout:['S......','.##....','...#...','.###...','.......','..##...','......G'],playerStart:{row:0,col:0},goal:{row:6,col:6},stars:[{row:0,col:2},{row:2,col:5},{row:6,col:2}]},
- {id:4,rows:8,columns:8,layout:['S...#...','.##.#.##','...#....','##.#.###','...#....','.###.##.','...#...G','........'],playerStart:{row:0,col:0},goal:{row:6,col:7},stars:[{row:0,col:2},{row:2,col:6},{row:7,col:3}]},
- {id:5,rows:9,columns:9,layout:['S...#....','.##.#.###','...#.....','##.###.#.','...#...#.','.#.###.#.','.#.....#.','.#####...','........G'],playerStart:{row:0,col:0},goal:{row:8,col:8},stars:[{row:0,col:2},{row:2,col:6},{row:8,col:3}]},
+// Authored layouts. Each stage is intentionally stored as data so its shape can be reviewed
+// independently instead of being produced by one repeated runtime generator.
+export const stages: readonly StageDefinition[] = [
+ {id:1,rows:5,columns:5,layout:['S..##','##.##','.....','##..#','####G'],playerStart:{row:0,col:0},goal:{row:4,col:4},stars:[{row:0,col:1},{row:2,col:0},{row:3,col:2}]},
+ {id:2,rows:6,columns:6,layout:['##G###','...#.#','.#...#','.#.###','S....#','######'],playerStart:{row:4,col:0},goal:{row:0,col:2},stars:[{row:3,col:2},{row:2,col:4},{row:1,col:1}]},
+ {id:3,rows:6,columns:6,layout:['###G##','#...##','#.#.##','#.#.##','#S...#','######'],playerStart:{row:4,col:1},goal:{row:0,col:3},stars:[{row:4,col:2},{row:2,col:3},{row:1,col:1}]},
+ {id:4,rows:7,columns:7,layout:['###G###','...#..#','.#.#.##','.#...##','S..#..#','###...#','#######'],playerStart:{row:4,col:0},goal:{row:0,col:3},stars:[{row:4,col:2},{row:3,col:3},{row:1,col:1}]},
+ {id:5,rows:7,columns:7,layout:['#######','#G....#','###.#.#','#...#.#','#.#...#','#S#####','#######'],playerStart:{row:5,col:1},goal:{row:1,col:1},stars:[{row:4,col:2},{row:3,col:3},{row:1,col:4}]},
+ {id:6,rows:7,columns:7,layout:['#######','#S..#G#','###.#.#','#.#...#','#.###.#','#.....#','#######'],playerStart:{row:1,col:1},goal:{row:1,col:5},stars:[{row:1,col:3},{row:4,col:5},{row:1,col:2}]},
+ {id:7,rows:8,columns:8,layout:['########','#....S##','#.######','#...#.##','###.#.##','#G....##','########','########'],playerStart:{row:1,col:5},goal:{row:5,col:1},stars:[{row:1,col:2},{row:5,col:4},{row:1,col:4}]},
+ {id:8,rows:8,columns:8,layout:['########','#....G##','#.#.####','#.#...##','#####.##','#S....##','########','########'],playerStart:{row:5,col:1},goal:{row:1,col:5},stars:[{row:5,col:4},{row:1,col:2},{row:5,col:2}]},
+ {id:9,rows:9,columns:9,layout:['#########','#G#.....#','#.#.#.###','#.#.#...#','#.#.###.#','#.#.#.#.#','#.#.#.#.#','#.....#S#','#########'],playerStart:{row:7,col:7},goal:{row:1,col:1},stars:[{row:2,col:5},{row:1,col:6},{row:7,col:4}]},
+ {id:10,rows:9,columns:9,layout:['#########','#S#.....#','#.#####.#','#.......#','#######.#','#....G#.#','#.#####.#','#.......#','#########'],playerStart:{row:1,col:1},goal:{row:5,col:5},stars:[{row:3,col:6},{row:2,col:7},{row:2,col:1}]},
+ {id:11,rows:10,columns:10,layout:['##########','#.#...#S##','#.#.#.#.##','#...#.#.##','#.###.#.##','#...#...##','###.######','#G......##','##########','##########'],playerStart:{row:1,col:7},goal:{row:7,col:1},stars:[{row:4,col:5},{row:2,col:1},{row:7,col:4}]},
+ {id:12,rows:10,columns:10,layout:['##########','#.......##','#.#####.##','#...#...##','###.#.####','#...#...##','#.#####.##','#S#G....##','##########','##########'],playerStart:{row:7,col:1},goal:{row:7,col:3},stars:[{row:3,col:1},{row:6,col:1},{row:5,col:1}]},
+ {id:13,rows:11,columns:11,layout:['###########','#.....#...#','#.###.#.#.#','#.#...#.#.#','#.#.#.#.#.#','#.#.#.#.#.#','#.#.#.#.#.#','#.#.#.#.#.#','#.#.###.#.#','#G#.....#S#','###########'],playerStart:{row:9,col:9},goal:{row:9,col:1},stars:[{row:3,col:7},{row:4,col:5},{row:8,col:9}]},
+ {id:14,rows:11,columns:11,layout:['###########','#S........#','#########.#','#.....#.#.#','#.###.#.#.#','#...#...#.#','#.#.#####.#','#.#...#...#','#.###.#.###','#...#....G#','###########'],playerStart:{row:1,col:1},goal:{row:9,col:9},stars:[{row:1,col:6},{row:9,col:6},{row:1,col:2}]},
+ {id:15,rows:12,columns:12,layout:['############','#G#......S##','#.#.########','#.#.......##','#.#######.##','#.#.....#.##','#.#.###.#.##','#.#...#.#.##','#.###.#.#.##','#.....#...##','############','############'],playerStart:{row:1,col:9},goal:{row:1,col:1},stars:[{row:3,col:8},{row:1,col:8},{row:1,col:7}]},
+ {id:16,rows:12,columns:12,layout:['############','#........G##','#.#.########','#.#.......##','#.#######.##','#.#.......##','#.#.########','#.#.......##','#########.##','#S........##','############','############'],playerStart:{row:9,col:1},goal:{row:1,col:9},stars:[{row:7,col:8},{row:1,col:2},{row:9,col:2}]},
+ {id:17,rows:13,columns:13,layout:['#############','#G#.....#...#','#.#.#.#.#.#.#','#.#.#.#.#.#.#','#.#.#.#.#.#.#','#.#.#.#...#.#','#.#.#.#.#####','#...#.#.#...#','#.###.###.#.#','#...#...#.#.#','###.###.#.#.#','#.....#...#S#','#############'],playerStart:{row:11,col:11},goal:{row:1,col:1},stars:[{row:11,col:8},{row:1,col:6},{row:8,col:1}]},
+ {id:18,rows:13,columns:13,layout:['#############','#S#.....#...#','#.#.#.###.#.#','#.#.#...#.#.#','#.#.###.#.#.#','#.#...#...#.#','#.###.#####.#','#.#...#.....#','#.#####.###.#','#.#.....#...#','#.#.#####.###','#...#......G#','#############'],playerStart:{row:1,col:1},goal:{row:11,col:11},stars:[{row:10,col:1},{row:6,col:11},{row:11,col:8}]},
+ {id:19,rows:14,columns:14,layout:['##############','#.#.......#S##','#.#.###.#.#.##','#.#...#.#.#.##','#.###.#.###.##','#.....#.....##','#.############','#.#.....#...##','#.#.###.###.##','#.#...#.....##','#.###.#####.##','#.....#G....##','##############','##############'],playerStart:{row:1,col:11},goal:{row:11,col:7},stars:[{row:1,col:3},{row:4,col:1},{row:8,col:11}]},
+ {id:20,rows:14,columns:14,layout:['##############','#.........#G##','#.#######.#.##','#.#.#.....#.##','#.#.#.#####.##','#.#.........##','#.#########.##','#...#.......##','###.#.########','#...#.......##','#.#########.##','#S#.........##','##############','##############'],playerStart:{row:11,col:1},goal:{row:1,col:11},stars:[{row:4,col:1},{row:5,col:4},{row:6,col:11}]},
+ {id:21,rows:15,columns:15,layout:['###############','#.....#...#...#','#.#.#.#.#.#.#.#','#.#.#.#.#...#.#','#.#.#.#.#####.#','#.#.#G#.#...#.#','#.#.###.###.#.#','#.#...#.#...#.#','#.###.#.#.###.#','#.#...#.#...#.#','#.#.#.#.###.#.#','#.#.#.#...#.#.#','#.#.#####.#.#.#','#.#.........#S#','###############'],playerStart:{row:13,col:13},goal:{row:5,col:5},stars:[{row:3,col:9},{row:10,col:5},{row:13,col:10}]},
+ {id:22,rows:15,columns:15,layout:['###############','#S#.......#...#','#.#.#####.#.#.#','#...#...#...#.#','#######.#####.#','#.#.....#.....#','#.#.#.#.#.#####','#...#.#G#.....#','#.###.#######.#','#.#.#...#...#.#','#.#.###.#.#.#.#','#.#.#...#.#.#.#','#.#.#.###.#.#.#','#...#.....#...#','###############'],playerStart:{row:1,col:1},goal:{row:7,col:7},stars:[{row:1,col:13},{row:4,col:7},{row:5,col:4}]},
+ {id:23,rows:15,columns:15,layout:['###############','#.......#...#S#','#.#####.###.#.#','#.#.........#.#','#.#####.#####.#','#.....#.#.....#','#.###.#.#.#####','#...#.#.#...#.#','###.#.#.###.#.#','#...#.#...#.#.#','#.###.#.###.#.#','#...#.#.#...#.#','###.#.###.###.#','#G..#.........#','###############'],playerStart:{row:1,col:13},goal:{row:13,col:1},stars:[{row:9,col:11},{row:4,col:1},{row:13,col:10}]},
+ {id:24,rows:15,columns:15,layout:['###############','#.....#.......#','#.#.#.#.#.#.#.#','#.#.....#...#.#','#.#######.#.#.#','#.#.......#G#.#','#.#.#.#######.#','#...#.#.......#','#.#####.#####.#','#.#.....#...#.#','###.#####.#.#.#','#...#.....#.#.#','#.###.#######.#','#S#...........#','###############'],playerStart:{row:13,col:1},goal:{row:5,col:11},stars:[{row:9,col:5},{row:3,col:10},{row:8,col:13}]},
+ {id:25,rows:15,columns:15,layout:['###############','#G#.......#...#','#.#.#.###.###.#','#.#.#.#...#...#','#.#.#.#.###.#.#','#.#.#.#.....#.#','#.#.#.#######.#','#.#.#.#.......#','#.#.#.#.#######','#.#.#.#.#.....#','#.#.#.#.#.###.#','#.#.#.#.#.#.#.#','#.#.#.###.#.#.#','#...#.......#S#','###############'],playerStart:{row:13,col:13},goal:{row:1,col:1},stars:[{row:13,col:6},{row:1,col:6},{row:13,col:10}]},
+ {id:26,rows:15,columns:15,layout:['###############','#S..#.........#','###.###.#####.#','#.#.....#...#.#','#.#######.#.#.#','#.......#.#.#.#','#.#.###.#.###.#','#.#.#.....#...#','###.#.#####.###','#...#.#...#.#G#','#.#.###.#.#.#.#','#.#.#...#.#.#.#','#.###.###.#.#.#','#.......#.....#','###############'],playerStart:{row:1,col:1},goal:{row:9,col:13},stars:[{row:1,col:7},{row:1,col:6},{row:13,col:10}]},
+ {id:27,rows:15,columns:15,layout:['###############','#.....#.....#S#','#.#####.#.###.#','#.#.....#.....#','#.#.###########','#.#...#.......#','#.###.#.#####.#','#...#...#...#.#','#.#.#####.###.#','#.#.#...#.....#','#.###.#.#.#####','#...#.#.#.#...#','#.#.#.#.#.###.#','#G#...#.......#','###############'],playerStart:{row:1,col:13},goal:{row:13,col:1},stars:[{row:5,col:3},{row:8,col:9},{row:13,col:10}]},
+ {id:28,rows:15,columns:15,layout:['###############','#.#......G#...#','#.#.#.#####.#.#','#.#.#.......#.#','#.#.#########.#','#.#.#.....#...#','#.#.#.#.#.#.#.#','#.....#.#...#.#','#.#######.###.#','#...#.....#.#.#','###.#.#####.#.#','#...#.#...#...#','#####.#.#.#.###','#S....#.#.....#','###############'],playerStart:{row:13,col:1},goal:{row:1,col:9},stars:[{row:9,col:7},{row:6,col:7},{row:7,col:10}]},
+ {id:29,rows:15,columns:15,layout:['###############','#...#....G#...#','#.#.#.#.###.#.#','#.#...#.#...#.#','#.#####.#.###.#','#.....#.#.#.#.#','#.###.###.#.#.#','#.#.#.......#.#','#.#.#########.#','#.#.#.....#...#','#.#.#.###.#.###','#.#...#...#...#','#.#####.#.###.#','#.......#...#S#','###############'],playerStart:{row:13,col:13},goal:{row:1,col:9},stars:[{row:3,col:13},{row:6,col:1},{row:7,col:10}]},
+ {id:30,rows:15,columns:15,layout:['###############','#S#.....#.....#','#.#.###.#####.#','#.#.#.#...#...#','#.#.#.###.#.#.#','#.#.#...#...#.#','#.#.#.#######.#','#...#.......#.#','#####.#.#####.#','#.....#.#.....#','#.#####.#.#####','#.#...#...#G..#','#.#.#.#######.#','#...#.........#','###############'],playerStart:{row:1,col:1},goal:{row:11,col:11},stars:[{row:3,col:9},{row:6,col:5},{row:7,col:8}]},
 ];
 
-// Deterministic depth-first mazes keep later stages varied while remaining reproducible.
-function makeChallengeStage(id: StageId, size: number): StageDefinition {
-  const grid = Array.from({ length: size }, () => Array.from({ length: size }, () => '#'));
-  let seed = id * 7919 + size * 104729;
-  const random = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 0x100000000; };
-  const start = { row: 1, col: 1 };
-  const stack: Position[] = [start];
-  grid[start.row][start.col] = '.';
-  const directions = [[-2,0],[2,0],[0,-2],[0,2]] as const;
-  while (stack.length) {
-    const current = stack[stack.length - 1];
-    const style = id % 4;
-    const options = directions
-      .map(([dr, dc]) => ({ dr, dc, row: current.row + dr, col: current.col + dc }))
-      .filter(next => next.row > 0 && next.row < size - 1 && next.col > 0 && next.col < size - 1 && grid[next.row][next.col] === '#')
-      .sort((a, b) => {
-        const aBias = style === 1 ? (a.dr === 0 ? -0.35 : 0) : style === 2 ? (a.dc === 0 ? -0.35 : 0) : 0;
-        const bBias = style === 1 ? (b.dr === 0 ? -0.35 : 0) : style === 2 ? (b.dc === 0 ? -0.35 : 0) : 0;
-        return random() + aBias - (random() + bBias);
-      });
-    if (!options.length) { stack.pop(); continue; }
-    const next = options[0];
-    grid[current.row + next.dr / 2][current.col + next.dc / 2] = '.';
-    grid[next.row][next.col] = '.';
-    stack.push({ row: next.row, col: next.col });
-  }
-  // Two later styles deliberately add broad garden paths so the visual rhythm
-  // differs from the narrow, winding stages instead of repeating one pattern.
-  if (id % 4 === 2) {
-    const row = 2 + (id % (size - 3));
-    for (let col = 1; col < size - 1; col += 2) grid[row][col] = '.';
-  }
-  if (id % 4 === 3) {
-    const col = 2 + (id % (size - 3));
-    for (let row = 1; row < size - 1; row += 2) grid[row][col] = '.';
-  }
-  const goal = { row: size - 2, col: size - 2 };
-  grid[start.row][start.col] = 'S';
-  grid[goal.row][goal.col] = 'G';
-  const open: Position[] = [];
-  for (let row = 1; row < size - 1; row++) for (let col = 1; col < size - 1; col++) if (grid[row][col] === '.') open.push({ row, col });
-  const starCount = id < 11 ? 3 : id < 21 ? 4 : 5;
-  const stars = Array.from({ length: starCount }, (_, index) => open[Math.floor((index + 1) * open.length / (starCount + 1))]);
-  return { id, rows: size, columns: size, layout: grid.map(row => row.join('')), playerStart: start, goal, stars };
-}
-
-const challengeStages = Array.from({ length: 25 }, (_, index) => {
-  const id = (index + 6) as StageId;
-  const sizePlan = [11,13,11,15,13,15,11,13,15,13,15,11,15,13,11,15,13,11,15,13,11,15,13,15,13];
-  const size = sizePlan[index];
-  return makeChallengeStage(id, size);
-});
-
-export const stages: readonly StageDefinition[] = [...starterStages, ...challengeStages];
-
-// Fail fast during tests and production builds. An unwinnable stage must never ship.
-const invalidStages = stages.filter(stage => !validateStage(stage));
-if (invalidStages.length > 0) throw new Error(`Invalid maze stage(s): ${invalidStages.map(stage => stage.id).join(', ')}`);
+const invalidStages=stages.filter(stage=>!validateStage(stage));
+if(invalidStages.length>0)throw new Error(`Invalid maze stage(s): ${invalidStages.map(stage=>stage.id).join(', ')}`);
