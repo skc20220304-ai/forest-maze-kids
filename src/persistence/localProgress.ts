@@ -23,11 +23,12 @@ export function normalizeSaveSlots(value: unknown): SaveSlot[] {
   const source = Array.isArray(value) ? value : [];
   return emptySaveSlots().map((slot, index) => {
     const candidate = source[index] as Partial<SaveSlot> | undefined;
+    const updatedAt = typeof candidate?.updatedAt === 'string' ? candidate.updatedAt : undefined;
     return {
       id: slot.id,
       name: typeof candidate?.name === 'string' ? candidate.name.trim().slice(0, 24) : '',
       highestStage: clampStage(candidate?.highestStage),
-      updatedAt: typeof candidate?.updatedAt === 'string' ? candidate.updatedAt : undefined,
+      ...(updatedAt ? { updatedAt } : {}),
     };
   });
 }
