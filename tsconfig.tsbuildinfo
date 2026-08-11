@@ -1,0 +1,1 @@
+{"root":["./src/main.ts","./src/domain/maze.ts","./src/domain/reducer.ts","./src/domain/types.ts","./src/game/gamescene.ts","./src/persistence/cloudprogress.ts","./src/persistence/localprogress.ts","./src/stages/stages.ts","./tests/maze.test.ts","./vite.config.ts"],"version":"5.9.3"}
