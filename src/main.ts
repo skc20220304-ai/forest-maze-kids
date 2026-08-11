@@ -102,6 +102,7 @@ const renderStagePicker = () => {
   });
 };
 document.querySelector('#stage-select')!.addEventListener('click', () => { renderStagePicker(); stagePicker.hidden = false; });
+document.querySelector('#back-to-stages')!.addEventListener('click', () => { overlay.hidden = true; renderStagePicker(); stagePicker.hidden = false; });
 document.querySelector('#close-stage-picker')!.addEventListener('click', () => { stagePicker.hidden = true; });
 
 document.querySelector('#reset')!.addEventListener('click', () => { overlay.hidden = true; document.dispatchEvent(new Event('maze:reset')); });
