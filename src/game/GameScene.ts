@@ -7,7 +7,7 @@ export class GameScene extends Phaser.Scene {
   private stage!: StageDefinition; private state!: GameState; private cell = 64; private layer?: Phaser.GameObjects.Container; private player!: Phaser.GameObjects.Text; private starTexts = new Map<string, Phaser.GameObjects.Text>(); private queued: Direction | null = null;
   constructor(){super('game')}
   create(){document.addEventListener('maze:move',this.onMove as EventListener);document.addEventListener('maze:reset',this.onReset);this.loadStage(Number(localStorage.getItem('forest-maze:stage'))||1)}
-  loadStage(id:number){this.stage=stages[Math.max(1,Math.min(5,id))-1];this.state=initialState(this.stage);this.queued=null;this.draw();this.emit()}
+  loadStage(id:number){this.stage=stages[Math.max(1,Math.min(10,id))-1];this.state=initialState(this.stage);this.queued=null;this.draw();this.emit()}
   private emit(){document.dispatchEvent(new CustomEvent('maze:state',{detail:this.state}))}
   private onMove=(e:Event)=>{const d=(e as CustomEvent<Direction>).detail;if(this.state.phase!=='ready'){if(!this.queued)this.queued=d;return}this.perform(d)}
   private onReset=()=>this.loadStage(this.stage.id)

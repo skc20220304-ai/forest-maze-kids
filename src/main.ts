@@ -5,6 +5,7 @@ import type { Direction, GameState } from './domain/types';
 import { getActiveSlotId, loadLocalSlots, loadLocalProgress, saveLocalProgress, saveLocalSlots, setActiveSlotId, type SaveSlot } from './persistence/localProgress';
 import { firebaseEnabled, auth, signIn, signUp, saveCloudSlots, syncSlots, watchUser } from './persistence/cloudProgress';
 import { GameScene } from './game/GameScene';
+import { stages } from './stages/stages';
 
 const stars = document.querySelector('#stars')!;
 const stageLabel = document.querySelector('#stage')!;
@@ -15,6 +16,8 @@ const picker = document.querySelector('#save-picker') as HTMLElement;
 const slotsElement = document.querySelector('#save-slots') as HTMLElement;
 const nameForm = document.querySelector('#save-name-form') as HTMLElement;
 const nameInput = document.querySelector('#save-name') as HTMLInputElement;
+const stagePicker = document.querySelector('#stage-picker') as HTMLElement;
+const stageList = document.querySelector('#stage-list') as HTMLElement;
 const activeSlotId = { value: getActiveSlotId() };
 let editingSlotId: string | null = null;
 let current: GameState | null = null;
@@ -84,21 +87,38 @@ document.querySelector('#save-name-ok')!.addEventListener('click', () => {
 });
 document.querySelector('#save-name-cancel')!.addEventListener('click', () => { nameForm.hidden = true; editingSlotId = null; });
 
+const renderStagePicker = () => {
+  const selected = loadLocalSlots().find((slot) => slot.id === activeSlotId.value);
+  const highestStage = selected?.highestStage ?? 1;
+  stageList.replaceChildren();
+  stages.forEach((stage) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'stage-choice';
+    button.disabled = stage.id > highestStage;
+    button.textContent = stage.id <= highestStage ? `ステージ ${stage.id}` : `🔒 ステージ ${stage.id}`;
+    button.addEventListener('click', () => { stagePicker.hidden = true; overlay.hidden = true; (game.scene.getScene('game') as GameScene).loadStage(stage.id); });
+    stageList.append(button);
+  });
+};
+document.querySelector('#stage-select')!.addEventListener('click', () => { renderStagePicker(); stagePicker.hidden = false; });
+document.querySelector('#close-stage-picker')!.addEventListener('click', () => { stagePicker.hidden = true; });
+
 document.querySelector('#reset')!.addEventListener('click', () => { overlay.hidden = true; document.dispatchEvent(new Event('maze:reset')); });
 document.addEventListener('maze:state', (event) => {
   current = (event as CustomEvent<GameState>).detail;
-  const total = current.stageId === 1 ? 1 : current.stageId === 2 ? 2 : 3;
+  const total = stages.find((stage) => stage.id === current!.stageId)?.stars.length ?? 3;
   stars.textContent = `⭐ ${current.collectedStars.size} / ${total}`;
   stageLabel.textContent = `ステージ ${current.stageId}`;
   if (current.phase === 'stageClear') {
     saveLocalProgress(current.stageId, activeSlotId.value ?? undefined);
     void saveCloudSlots(loadLocalSlots());
     overlay.hidden = false;
-    title.textContent = current.stageId === 5 ? '🎉 ぜんぶクリア！ ✨' : '🎉 やったー！ ✨';
-    next.hidden = current.stageId === 5;
+    title.textContent = current.stageId === 10 ? '🎉 ぜんぶクリア！ ✨' : '🎉 やったー！ ✨';
+    next.hidden = current.stageId === 10;
   }
 });
-next.addEventListener('click', () => { if (!current || current.stageId >= 5) return; saveLocalProgress(current.stageId + 1, activeSlotId.value ?? undefined); overlay.hidden = true; (game.scene.getScene('game') as GameScene).loadStage(current.stageId + 1); });
+next.addEventListener('click', () => { if (!current || current.stageId >= 10) return; saveLocalProgress(current.stageId + 1, activeSlotId.value ?? undefined); overlay.hidden = true; (game.scene.getScene('game') as GameScene).loadStage(current.stageId + 1); });
 
 renderSaveSlots(loadLocalSlots());
 const syncOnLogin = async () => {
