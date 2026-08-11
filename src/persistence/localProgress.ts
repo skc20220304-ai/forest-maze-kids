@@ -14,7 +14,7 @@ const LEGACY_STAGE_KEY = 'forest-maze:stage';
 
 const clampStage = (value: unknown) => {
   const stage = Number(value);
-  return Number.isInteger(stage) && stage >= 1 && stage <= 30 ? stage : 1;
+  return Number.isInteger(stage) && stage >= 1 && stage <= 50 ? stage : 1;
 };
 
 export function emptySaveSlots(): SaveSlot[] {
