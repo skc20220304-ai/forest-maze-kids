@@ -140,11 +140,11 @@ document.addEventListener('maze:state', (event) => {
     saveLocalProgress(current.stageId, activeSlotId.value ?? undefined);
     void saveCloudSlots(loadLocalSlots()).catch(() => undefined);
     overlay.hidden = false;
-    title.textContent = current.stageId === 10 ? '🎉 ぜんぶクリア！ ✨' : '🎉 やったー！ ✨';
-    next.hidden = current.stageId === 10;
+    title.textContent = current.stageId === stages.length ? '🎉 ぜんぶクリア！ ✨' : '🎉 やったー！ ✨';
+    next.hidden = current.stageId === stages.length;
   }
 });
-next.addEventListener('click', () => { if (!current || current.stageId >= 10) return; saveLocalProgress(current.stageId + 1, activeSlotId.value ?? undefined); overlay.hidden = true; (game.scene.getScene('game') as GameScene).loadStage(current.stageId + 1); });
+next.addEventListener('click', () => { if (!current || current.stageId >= stages.length) return; saveLocalProgress(current.stageId + 1, activeSlotId.value ?? undefined); overlay.hidden = true; (game.scene.getScene('game') as GameScene).loadStage(current.stageId + 1); });
 
 renderSaveSlots(loadLocalSlots());
 const syncOnLogin = async () => {

@@ -1,7 +1,7 @@
 import {describe,expect,it} from 'vitest';import {stages} from '../src/stages/stages';import {validateStage} from '../src/domain/maze';import {initialState,move} from '../src/domain/reducer';
 describe('maze safety',()=>{
   it('validates every stage and keeps IDs unique',()=>{
-    expect(stages.map(stage=>stage.id)).toEqual([1,2,3,4,5,6,7,8,9,10]);
+    expect(stages.map(stage=>stage.id)).toEqual(Array.from({length:30},(_,index)=>index+1));
     stages.forEach(stage=>expect(validateStage(stage),`stage ${stage.id} must be winnable`).toBe(true));
   });
   it('rejects malformed or unreachable stage data',()=>{
