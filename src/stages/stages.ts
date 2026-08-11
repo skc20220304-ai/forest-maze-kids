@@ -1,9 +1,9 @@
 import type { StageDefinition, StageId } from '../domain/types';
-import { validateStage } from '../domain/maze';
+import { validateDifficultyProgression, validateStage } from '../domain/maze';
 
 // Authored layouts. Each stage is intentionally stored as data so its shape can be reviewed
 // independently instead of being produced by one repeated runtime generator.
-const baseStages: readonly StageDefinition[] = [
+const baseStages: readonly Omit<StageDefinition, 'difficulty'>[] = [
  {id:1,rows:5,columns:5,layout:['S..##','##.##','.....','##...','####G'],playerStart:{row:0,col:0},goal:{row:4,col:4},stars:[{row:0,col:1},{row:2,col:0},{row:3,col:2}]},
  {id:2,rows:6,columns:6,layout:['##G###','...#.#','.#...#','.#.###','S....#','######'],playerStart:{row:4,col:0},goal:{row:0,col:2},stars:[{row:3,col:2},{row:2,col:4},{row:1,col:1}]},
  {id:3,rows:6,columns:6,layout:['###G##','#...##','#.#.##','#.#.##','#S...#','######'],playerStart:{row:4,col:1},goal:{row:0,col:3},stars:[{row:4,col:2},{row:2,col:3},{row:1,col:1}]},
@@ -37,12 +37,12 @@ const baseStages: readonly StageDefinition[] = [
 ];
 
 type VariantTransform = 'rotate' | 'mirror' | 'flip';
-const transformPoint = (point: { row: number; col: number }, stage: StageDefinition, transform: VariantTransform) => {
+const transformPoint = (point: { row: number; col: number }, stage: Omit<StageDefinition, 'difficulty'>, transform: VariantTransform) => {
   if (transform === 'rotate') return { row: point.col, col: stage.rows - 1 - point.row };
   if (transform === 'mirror') return { row: point.row, col: stage.columns - 1 - point.col };
   return { row: stage.rows - 1 - point.row, col: point.col };
 };
-const transformLayout = (stage: StageDefinition, transform: VariantTransform) => {
+const transformLayout = (stage: Omit<StageDefinition, 'difficulty'>, transform: VariantTransform) => {
   if (transform === 'mirror') return stage.layout.map(row => [...row].reverse().join(''));
   if (transform === 'flip') return [...stage.layout].reverse();
   return Array.from({ length: stage.columns }, (_, row) => Array.from({ length: stage.rows }, (_, col) => stage.layout[stage.rows - 1 - col][row]).join(''));
@@ -50,10 +50,11 @@ const transformLayout = (stage: StageDefinition, transform: VariantTransform) =>
 const bonusSpecs: readonly [number, VariantTransform][] = [[11,'rotate'],[12,'mirror'],[13,'flip'],[14,'rotate'],[15,'mirror'],[16,'flip'],[17,'rotate'],[18,'mirror'],[19,'flip'],[20,'rotate'],[21,'mirror'],[22,'flip'],[23,'rotate'],[24,'mirror'],[25,'flip'],[26,'rotate'],[27,'mirror'],[28,'flip'],[29,'rotate'],[30,'mirror']];
 const bonusStages: readonly StageDefinition[] = bonusSpecs.map(([sourceId, transform], index) => {
   const source = baseStages[sourceId - 1]; const id = (index + 31) as StageId;
-  return { id, rows: transform === 'rotate' ? source.columns : source.rows, columns: transform === 'rotate' ? source.rows : source.columns, layout: transformLayout(source, transform), playerStart: transformPoint(source.playerStart, source, transform), goal: transformPoint(source.goal, source, transform), stars: source.stars.map(star => transformPoint(star, source, transform)) };
+  return { id, difficulty: id, rows: transform === 'rotate' ? source.columns : source.rows, columns: transform === 'rotate' ? source.rows : source.columns, layout: transformLayout(source, transform), playerStart: transformPoint(source.playerStart, source, transform), goal: transformPoint(source.goal, source, transform), stars: source.stars.map(star => transformPoint(star, source, transform)) };
 });
 
-export const stages: readonly StageDefinition[] = [...baseStages, ...bonusStages];
+export const stages: readonly StageDefinition[] = [...baseStages.map((stage, index) => ({ ...stage, difficulty: index + 1 })), ...bonusStages];
 
 const invalidStages=stages.filter(stage=>!validateStage(stage));
 if(invalidStages.length>0)throw new Error(`Invalid maze stage(s): ${invalidStages.map(stage=>stage.id).join(', ')}`);
+if(!validateDifficultyProgression(stages))throw new Error('Stage difficulty must increase from one stage to the next.');

@@ -11,7 +11,7 @@ const inBounds=(p:Position,rows:number,columns:number)=>Number.isInteger(p.row)&
  * malformed data must fail tests/build instead of producing an unwinnable maze.
  */
 export function validateStage(stage:StageDefinition){
-  if(!stage||!Number.isInteger(stage.rows)||!Number.isInteger(stage.columns)||stage.rows<=0||stage.columns<=0)return false;
+  if(!stage||!Number.isInteger(stage.difficulty)||stage.difficulty<1||!Number.isInteger(stage.rows)||!Number.isInteger(stage.columns)||stage.rows<=0||stage.columns<=0)return false;
   if(stage.layout.length!==stage.rows||stage.layout.some(row=>typeof row!=='string'||row.length!==stage.columns||!cellPattern.test(row)))return false;
   const starts=stage.layout.flatMap((row,r)=>[...row].flatMap((cell,c)=>cell==='S'?[{row:r,col:c}]:[]));
   const goals=stage.layout.flatMap((row,r)=>[...row].flatMap((cell,c)=>cell==='G'?[{row:r,col:c}]:[]));
@@ -30,4 +30,9 @@ export function validateStage(stage:StageDefinition){
   const stateSeen=new Set([`${keyOf(stage.playerStart)}:${startMask}`]);
   while(states.length){const [p,mask]=states.shift()!;for(const d of ds){const n=nextPosition(p,d);if(n.row<0||n.row>=stage.rows||n.col<0||n.col>=stage.columns||stage.layout[n.row][n.col]==='#'||keyOf(n)===keyOf(stage.goal))continue;const nextMask=mask|(starBits.get(keyOf(n))??0),stateKey=`${keyOf(n)}:${nextMask}`;if(!stateSeen.has(stateKey)){if(nextMask===7){const goalReachable=ds.some(nextDirection=>canMove(stage,n,nextDirection)&&keyOf(nextPosition(n,nextDirection))===keyOf(stage.goal));if(goalReachable)return true}stateSeen.add(stateKey);states.push([n,nextMask])}}}
   return false;
+}
+
+/** New stages must carry a higher authored difficulty rank than the one before them. */
+export function validateDifficultyProgression(stages: readonly StageDefinition[]) {
+  return stages.every((stage, index) => index === 0 || stage.difficulty > stages[index - 1].difficulty);
 }
