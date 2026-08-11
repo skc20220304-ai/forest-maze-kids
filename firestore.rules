@@ -4,10 +4,8 @@ service cloud.firestore {
     match /game_progress/{userId} {
       allow get: if request.auth != null && request.auth.uid == userId;
       allow create, update: if request.auth != null && request.auth.uid == userId
-        && request.resource.data.keys().hasOnly(['highestStage', 'updatedAt'])
-        && request.resource.data.highestStage is int
-        && request.resource.data.highestStage >= 1
-        && request.resource.data.highestStage <= 5;
+        && request.resource.data.keys().hasOnly(['slots', 'updatedAt'])
+        && request.resource.data.slots is map;
     }
   }
 }

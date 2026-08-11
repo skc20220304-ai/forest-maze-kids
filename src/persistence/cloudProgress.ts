@@ -1,6 +1,7 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, type User } from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
+import { emptySaveSlots, normalizeSaveSlots, type SaveSlot } from './localProgress';
 
 const env = import.meta.env;
 const config = { apiKey: env.VITE_FIREBASE_API_KEY, authDomain: env.VITE_FIREBASE_AUTH_DOMAIN, projectId: env.VITE_FIREBASE_PROJECT_ID, storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET, messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID, appId: env.VITE_FIREBASE_APP_ID };
@@ -12,6 +13,33 @@ const db = app ? getFirestore(app) : null;
 export async function signIn(email: string, password: string) { if (!auth) return { ok: false, message: 'Firebase未設定です。' }; try { await signInWithEmailAndPassword(auth, email, password); return { ok: true, message: 'ログインしました。' }; } catch { return { ok: false, message: 'メールアドレスまたはパスワードを確認してください。' }; } }
 export async function signUp(email: string, password: string) { if (!auth) return { ok: false, message: 'Firebase未設定です。' }; try { await createUserWithEmailAndPassword(auth, email, password); return { ok: true, message: 'アカウントを作成しました。' }; } catch { return { ok: false, message: '登録できません。メールアドレスと6文字以上のパスワードを確認してください。' }; } }
 export function watchUser(callback: (user: User | null) => void) { if (auth) return onAuthStateChanged(auth, callback); callback(null); return () => undefined; }
-export async function loadCloudProgress() { if (!db || !auth?.currentUser) return null; const snapshot = await getDoc(doc(db, 'game_progress', auth.currentUser.uid)); return snapshot.exists() ? Number(snapshot.data().highestStage ?? 1) : null; }
-export async function saveCloudProgress(stage: number) { if (!db || !auth?.currentUser) return false; await setDoc(doc(db, 'game_progress', auth.currentUser.uid), { highestStage: stage, updatedAt: new Date().toISOString() }, { merge: true }); return true; }
-export async function syncProgress(localStage: number) { const remote = await loadCloudProgress(); const stage = Math.max(localStage, remote ?? 1); return { stage, synced: await saveCloudProgress(stage) }; }
+
+export async function loadCloudSlots(): Promise<SaveSlot[] | null> {
+  if (!db || !auth?.currentUser) return null;
+  const snapshot = await getDoc(doc(db, 'game_progress', auth.currentUser.uid));
+  if (!snapshot.exists()) return null;
+  const data = snapshot.data();
+  if (data.slots) return normalizeSaveSlots(Object.values(data.slots));
+  const slots = emptySaveSlots();
+  if (Number.isInteger(data.highestStage)) { slots[0].name = 'データ1'; slots[0].highestStage = Math.max(1, Math.min(5, Number(data.highestStage))); }
+  return slots;
+}
+
+export async function saveCloudSlots(slots: SaveSlot[]) {
+  if (!db || !auth?.currentUser) return false;
+  const normalized = normalizeSaveSlots(slots);
+  const record = Object.fromEntries(normalized.map((slot) => [slot.id, slot]));
+  await setDoc(doc(db, 'game_progress', auth.currentUser.uid), { slots: record, updatedAt: new Date().toISOString() });
+  return true;
+}
+
+export async function syncSlots(localSlots: SaveSlot[]) {
+  const remoteSlots = await loadCloudSlots();
+  if (!remoteSlots) { await saveCloudSlots(localSlots); return normalizeSaveSlots(localSlots); }
+  const merged = normalizeSaveSlots(localSlots).map((local, index) => {
+    const remote = remoteSlots[index];
+    return { ...local, name: remote.name || local.name, highestStage: Math.max(local.highestStage, remote.highestStage), updatedAt: remote.updatedAt ?? local.updatedAt };
+  });
+  await saveCloudSlots(merged);
+  return merged;
+}
