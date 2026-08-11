@@ -1,4 +1,5 @@
 import type { StageDefinition } from '../domain/types';
+import { validateStage } from '../domain/maze';
 export const stages: readonly StageDefinition[] = [
  {id:1,rows:5,columns:5,layout:['S....','.##..','...#.','.#...','....G'],playerStart:{row:0,col:0},goal:{row:4,col:4},stars:[{row:0,col:2}]},
  {id:2,rows:6,columns:6,layout:['S.....','.##...','...#..','.##...','....#.','.....G'],playerStart:{row:0,col:0},goal:{row:5,col:5},stars:[{row:0,col:2},{row:4,col:2}]},
@@ -11,3 +12,7 @@ export const stages: readonly StageDefinition[] = [
  ,{id:9,rows:13,columns:13,layout:['S............','############.','.............','.############','.............','############.','.............','.############','.............','############.','.............','.############','............G'],playerStart:{row:0,col:0},goal:{row:12,col:12},stars:[{row:0,col:7},{row:4,col:9},{row:8,col:2},{row:10,col:10}]}
  ,{id:10,rows:14,columns:14,layout:['S.............','#############.','..............','.#############','..............','#############.','..............','.#############','..............','#############.','..............','.#############','..............','#############G'],playerStart:{row:0,col:0},goal:{row:13,col:13},stars:[{row:0,col:8},{row:4,col:10},{row:8,col:3},{row:12,col:11},{row:12,col:5}]}
 ];
+
+// Fail fast during tests and production builds. An unwinnable stage must never ship.
+const invalidStages=stages.filter(stage=>!validateStage(stage));
+if(invalidStages.length>0)throw new Error(`Invalid maze stage(s): ${invalidStages.map(stage=>stage.id).join(', ')}`);
