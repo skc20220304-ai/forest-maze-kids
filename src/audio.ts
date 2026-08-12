@@ -29,10 +29,11 @@ function stopBgm() { if (bgmTimer !== null) window.clearTimeout(bgmTimer); bgmTi
 export function unlockAudio() { startBgm(); }
 export function isMuted() { return muted; }
 export function toggleMute() { muted = !muted; localStorage.setItem(MUTE_KEY, muted ? '1' : '0'); if (muted) stopBgm(); else startBgm(); return muted; }
-export function playSound(kind: 'move' | 'blocked' | 'star' | 'goal') {
+export function playSound(kind: 'move' | 'blocked' | 'star' | 'goal' | 'clear') {
   const ctx = getContext(); if (!ctx || muted) return; const when = ctx.currentTime;
   if (kind === 'move') tone(440, 0.07, 0.045, when, 'sine');
   if (kind === 'blocked') tone(175, 0.1, 0.04, when, 'square');
   if (kind === 'star') { tone(784, 0.12, 0.06, when, 'sine'); tone(1175, 0.18, 0.05, when + 0.09, 'sine'); }
-  if (kind === 'goal') { tone(523, 0.16, 0.06, when, 'triangle'); tone(659, 0.16, 0.06, when + 0.12, 'triangle'); tone(784, 0.28, 0.07, when + 0.24, 'triangle'); }
+  if (kind === 'goal') { tone(523, 0.13, 0.055, when, 'triangle'); tone(659, 0.13, 0.055, when + 0.1, 'triangle'); tone(784, 0.18, 0.065, when + 0.2, 'triangle'); }
+  if (kind === 'clear') { [[523,.00],[659,.12],[784,.24],[1046,.38],[1318,.56]].forEach(([note,offset])=>tone(note,0.22,0.075,when+offset,'triangle')); tone(262,0.7,0.035,when,'sine'); }
 }

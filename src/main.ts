@@ -13,6 +13,8 @@ const stageLabel = document.querySelector('#stage')!;
 const overlay = document.querySelector('#overlay') as HTMLElement;
 const title = document.querySelector('#overlay-title')!;
 const next = document.querySelector('#next') as HTMLButtonElement;
+const clearStars = document.querySelector('#clear-stars') as HTMLElement;
+const clearMessage = document.querySelector('#clear-message') as HTMLElement;
 const picker = document.querySelector('#save-picker') as HTMLElement;
 const slotsElement = document.querySelector('#save-slots') as HTMLElement;
 const nameForm = document.querySelector('#save-name-form') as HTMLElement;
@@ -26,11 +28,18 @@ const activeSlotId = { value: getActiveSlotId() };
 let editingSlotId: string | null = null;
 let current: GameState | null = null;
 let stageStartedAt = Date.now();
+let clearRevealTimer: number | null = null;
 const soundToggle = document.querySelector('#sound-toggle') as HTMLButtonElement;
 
 const game = new Phaser.Game({ type: Phaser.CANVAS, parent: 'game-container', backgroundColor: '#eaf6d8', scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, width: 540, height: 540 }, scene: [GameScene], render: { antialias: true, pixelArt: false } });
 
-const loadStage = (stageId: number) => { stageStartedAt = Date.now(); (game.scene.getScene('game') as GameScene).loadStage(stageId); };
+const loadStage = (stageId: number) => {
+  if (clearRevealTimer !== null) window.clearTimeout(clearRevealTimer);
+  clearRevealTimer = null;
+  next.classList.remove('ready');
+  stageStartedAt = Date.now();
+  (game.scene.getScene('game') as GameScene).loadStage(stageId);
+};
 
 const emitMove = (direction: Direction) => document.dispatchEvent(new CustomEvent('maze:move', { detail: direction }));
 const updateSoundButton = () => { soundToggle.textContent = isMuted() ? '🔇' : '🔊'; soundToggle.setAttribute('aria-label', isMuted() ? '音をオンにする' : '音をオフにする'); };
@@ -168,22 +177,32 @@ document.querySelector('#scores')!.addEventListener('click', renderScores);
 document.querySelector('#close-scores')!.addEventListener('click', () => { scoreBoard.hidden = true; });
 
 document.querySelector('#reset')!.addEventListener('click', () => { overlay.hidden = true; document.dispatchEvent(new Event('maze:reset')); });
+const showClearCelebration = (state: GameState) => {
+  const isFinalStage = state.stageId === stages.length;
+  title.textContent = isFinalStage ? '🎊 ぜんぶクリア！' : '🎉 やったー！';
+  clearStars.textContent = `${'⭐'.repeat(state.collectedStars.size)}${'☆'.repeat(Math.max(0, 3 - state.collectedStars.size))}`;
+  clearMessage.textContent = isFinalStage
+    ? `⭐ ${state.collectedStars.size} / 3　ぼうけん かんりょう！`
+    : `⭐ ${state.collectedStars.size} / 3　たからばこを みつけたよ！`;
+  next.hidden = isFinalStage;
+  next.classList.remove('ready');
+  overlay.hidden = false;
+  playSound('clear');
+  if (!isFinalStage) clearRevealTimer = window.setTimeout(() => next.classList.add('ready'), 850);
+};
 document.addEventListener('maze:state', (event) => {
   const previous = current;
   current = (event as CustomEvent<GameState>).detail;
   if (current.phase === 'blocked') playSound('blocked');
   if (previous && current.collectedStars.size > previous.collectedStars.size) playSound('star');
-  if (current.phase === 'stageClear' && previous?.phase !== 'stageClear') playSound('goal');
   const total = stages.find((stage) => stage.id === current!.stageId)?.stars.length ?? 3;
   stars.textContent = `⭐ ${current.collectedStars.size} / ${total}`;
   stageLabel.textContent = `ステージ ${current.stageId}`;
-  if (current.phase === 'stageClear') {
+  if (current.phase === 'stageClear' && previous?.phase !== 'stageClear') {
     saveLocalProgress(current.stageId, activeSlotId.value ?? undefined);
     saveStageScore(current.stageId, current.collectedStars.size, Date.now() - stageStartedAt, activeSlotId.value ?? undefined);
     void saveCloudSlots(loadLocalSlots()).catch(() => undefined);
-    overlay.hidden = false;
-    title.textContent = current.stageId === stages.length ? '🎉 ぜんぶクリア！ ✨' : '🎉 やったー！ ✨';
-    next.hidden = current.stageId === stages.length;
+    showClearCelebration(current);
   }
 });
 next.addEventListener('click', () => { if (!current || current.stageId >= stages.length) return; saveLocalProgress(current.stageId + 1, activeSlotId.value ?? undefined); overlay.hidden = true; loadStage(current.stageId + 1); });
