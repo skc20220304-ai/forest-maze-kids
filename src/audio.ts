@@ -6,8 +6,13 @@ const melodies: readonly (readonly number[])[] = [
   [261.63, 329.63, 392, 523.25, 392, 329.63, 293.66, 261.63],
   [659.25, 783.99, 987.77, 1046.5, 987.77, 783.99, 659.25, 587.33],
   [293.66, 369.99, 440, 587.33, 659.25, 587.33, 440, 369.99],
+  [523.25, 440, 587.33, 493.88, 659.25, 587.33, 493.88, 440],
+  [659.25, 587.33, 523.25, 659.25, 783.99, 659.25, 587.33, 523.25],
+  [392, 440, 523.25, 587.33, 523.25, 440, 392, 329.63],
+  [369.99, 440, 554.37, 659.25, 554.37, 440, 369.99, 293.66],
+  [523.25, 659.25, 783.99, 1046.5, 783.99, 659.25, 587.33, 523.25],
 ] as const;
-const melodyTypes: OscillatorType[] = ['triangle', 'sine', 'square', 'sine', 'triangle'];
+const melodyTypes: OscillatorType[] = ['triangle', 'sine', 'square', 'sine', 'triangle', 'triangle', 'sine', 'triangle', 'sine', 'triangle'];
 let melody = melodies[0];
 let melodyType: OscillatorType = melodyTypes[0];
 let melodyTempo = 0.42;
@@ -42,7 +47,7 @@ export function setBgmStage(stageId: number) {
   if (melody === melodies[themeIndex]) return;
   melody = melodies[themeIndex];
   melodyType = melodyTypes[themeIndex];
-  melodyTempo = [0.46, 0.5, 0.42, 0.36, 0.48][themeIndex];
+  melodyTempo = [0.46, 0.5, 0.42, 0.36, 0.48, 0.44, 0.4, 0.38, 0.46, 0.34][themeIndex];
   melodyIndex = 0;
   if (bgmTimer !== null) {
     stopBgm();

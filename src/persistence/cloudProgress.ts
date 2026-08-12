@@ -21,7 +21,7 @@ export async function loadCloudSlots(): Promise<SaveSlot[] | null> {
   const data = snapshot.data();
   if (data.slots) return normalizeSaveSlots(Object.values(data.slots));
   const slots = emptySaveSlots();
-  if (Number.isInteger(data.highestStage)) { slots[0].name = 'データ1'; slots[0].highestStage = Math.max(1, Math.min(50, Number(data.highestStage))); }
+  if (Number.isInteger(data.highestStage)) { slots[0].name = 'データ1'; slots[0].highestStage = Math.max(1, Math.min(100, Number(data.highestStage))); }
   return slots;
 }
 

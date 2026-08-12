@@ -14,7 +14,7 @@ const LEGACY_STAGE_KEY = 'forest-maze:stage';
 
 const clampStage = (value: unknown) => {
   const stage = Number(value);
-  return Number.isInteger(stage) && stage >= 1 && stage <= 50 ? stage : 1;
+  return Number.isInteger(stage) && stage >= 1 && stage <= 100 ? stage : 1;
 };
 
 export function emptySaveSlots(): SaveSlot[] {
@@ -40,11 +40,12 @@ export function normalizeSaveSlots(value: unknown): SaveSlot[] {
   return emptySaveSlots().map((slot, index) => {
     const candidate = source[index] as Partial<SaveSlot> | undefined;
     const updatedAt = typeof candidate?.updatedAt === 'string' ? candidate.updatedAt : undefined;
+    const scores = normalizeScores(candidate?.scores);
     return {
       id: slot.id,
       name: typeof candidate?.name === 'string' ? candidate.name.trim().slice(0, 24) : '',
-      highestStage: clampStage(candidate?.highestStage),
-      scores: normalizeScores(candidate?.scores),
+      highestStage: Math.max(clampStage(candidate?.highestStage), scores['50'] ? 51 : 1),
+      scores,
       ...(updatedAt ? { updatedAt } : {}),
     };
   });

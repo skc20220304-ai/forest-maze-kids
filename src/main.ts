@@ -223,7 +223,7 @@ const renderStickerBook = () => {
 document.querySelector('#stickers')!.addEventListener('click', () => { stickerPage = 0; renderStickerBook(); stickerBook.hidden = false; });
 document.querySelector('#close-stickers')!.addEventListener('click', () => { stickerBook.hidden = true; });
 document.querySelector('#sticker-prev')!.addEventListener('click', () => { stickerPage = Math.max(0, stickerPage - 1); renderStickerBook(); });
-document.querySelector('#sticker-next')!.addEventListener('click', () => { stickerPage = Math.min(4, stickerPage + 1); renderStickerBook(); });
+document.querySelector('#sticker-next')!.addEventListener('click', () => { stickerPage = Math.min(Math.ceil(stickers.length / 10) - 1, stickerPage + 1); renderStickerBook(); });
 
 document.querySelector('#reset')!.addEventListener('click', () => { overlay.hidden = true; document.dispatchEvent(new Event('maze:reset')); });
 const showClearCelebration = (state: GameState, reward: 'new' | 'sparkle' | null) => {
