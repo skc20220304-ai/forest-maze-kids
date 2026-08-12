@@ -7,7 +7,7 @@ import { firebaseEnabled, auth, signIn, signUp, saveCloudSlots, syncSlots, watch
 import { GameScene } from './game/GameScene';
 import { stages } from './stages/stages';
 import { stickerForStage, stickers } from './stickers';
-import { isMuted, playSound, toggleMute, unlockAudio } from './audio';
+import { isMuted, playSound, setBgmStage, toggleMute, unlockAudio } from './audio';
 
 const stars = document.querySelector('#stars')!;
 const stageLabel = document.querySelector('#stage')!;
@@ -45,6 +45,7 @@ const loadStage = (stageId: number) => {
   if (clearRevealTimer !== null) window.clearTimeout(clearRevealTimer);
   clearRevealTimer = null;
   next.classList.remove('ready');
+  setBgmStage(stageId);
   stageStartedAt = Date.now();
   (game.scene.getScene('game') as GameScene).loadStage(stageId);
 };

@@ -1,6 +1,16 @@
 const AudioContextCtor = window.AudioContext ?? (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
 const MUTE_KEY = 'forest-maze:sound-muted';
-const melody = [523.25, 659.25, 783.99, 659.25, 587.33, 698.46, 880, 698.46];
+const melodies: readonly (readonly number[])[] = [
+  [523.25, 587.33, 659.25, 783.99, 659.25, 587.33, 523.25, 440],
+  [392, 493.88, 587.33, 659.25, 587.33, 493.88, 392, 329.63],
+  [261.63, 329.63, 392, 523.25, 392, 329.63, 293.66, 261.63],
+  [659.25, 783.99, 987.77, 1046.5, 987.77, 783.99, 659.25, 587.33],
+  [293.66, 369.99, 440, 587.33, 659.25, 587.33, 440, 369.99],
+] as const;
+const melodyTypes: OscillatorType[] = ['triangle', 'sine', 'square', 'sine', 'triangle'];
+let melody = melodies[0];
+let melodyType: OscillatorType = melodyTypes[0];
+let melodyTempo = 0.42;
 let context: AudioContext | null = null;
 let bgmTimer: number | null = null;
 let nextNoteAt = 0;
@@ -21,12 +31,24 @@ function tone(frequency: number, duration: number, volume: number, when = getCon
 }
 function scheduleBgm() {
   const ctx = getContext(); if (!ctx || muted) return;
-  while (nextNoteAt < ctx.currentTime + 0.25) { tone(melody[melodyIndex], 0.28, 0.018, nextNoteAt, 'triangle'); melodyIndex = (melodyIndex + 1) % melody.length; nextNoteAt += 0.42; }
+  while (nextNoteAt < ctx.currentTime + 0.25) { tone(melody[melodyIndex], melodyTempo * 0.72, 0.018, nextNoteAt, melodyType); melodyIndex = (melodyIndex + 1) % melody.length; nextNoteAt += melodyTempo; }
   bgmTimer = window.setTimeout(scheduleBgm, 120);
 }
 function startBgm() { const ctx = getContext(); if (!ctx || muted || bgmTimer !== null) return; nextNoteAt = ctx.currentTime + 0.05; scheduleBgm(); }
 function stopBgm() { if (bgmTimer !== null) window.clearTimeout(bgmTimer); bgmTimer = null; }
 export function unlockAudio() { startBgm(); }
+export function setBgmStage(stageId: number) {
+  const themeIndex = Math.max(0, Math.min(melodies.length - 1, Math.floor((stageId - 1) / 10)));
+  if (melody === melodies[themeIndex]) return;
+  melody = melodies[themeIndex];
+  melodyType = melodyTypes[themeIndex];
+  melodyTempo = [0.46, 0.5, 0.42, 0.36, 0.48][themeIndex];
+  melodyIndex = 0;
+  if (bgmTimer !== null) {
+    stopBgm();
+    startBgm();
+  }
+}
 export function isMuted() { return muted; }
 export function toggleMute() { muted = !muted; localStorage.setItem(MUTE_KEY, muted ? '1' : '0'); if (muted) stopBgm(); else startBgm(); return muted; }
 export function playSound(kind: 'move' | 'blocked' | 'star' | 'goal' | 'clear' | 'sticker' | 'sparkle') {
