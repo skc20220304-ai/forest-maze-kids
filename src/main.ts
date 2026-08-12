@@ -37,6 +37,8 @@ let current: GameState | null = null;
 let stageStartedAt = Date.now();
 let clearRevealTimer: number | null = null;
 let stickerPage = 0;
+let holdDelayTimer: number | null = null;
+let holdRepeatTimer: number | null = null;
 const soundToggle = document.querySelector('#sound-toggle') as HTMLButtonElement;
 
 const game = new Phaser.Game({ type: Phaser.CANVAS, parent: 'game-container', backgroundColor: '#eaf6d8', scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, width: 540, height: 540 }, scene: [GameScene], render: { antialias: true, pixelArt: false } });
@@ -52,13 +54,26 @@ const loadStage = (stageId: number) => {
 
 const emitMove = (direction: Direction) => document.dispatchEvent(new CustomEvent('maze:move', { detail: direction }));
 const updateSoundButton = () => { soundToggle.textContent = isMuted() ? '🔇' : '🔊'; soundToggle.setAttribute('aria-label', isMuted() ? '音をオンにする' : '音をオフにする'); };
+const stopHeldMove = () => {
+  if (holdDelayTimer !== null) window.clearTimeout(holdDelayTimer);
+  if (holdRepeatTimer !== null) window.clearInterval(holdRepeatTimer);
+  holdDelayTimer = null;
+  holdRepeatTimer = null;
+};
 updateSoundButton();
 document.addEventListener('pointerdown', unlockAudio, { once: true });
 document.addEventListener('keydown', unlockAudio, { once: true });
 soundToggle.addEventListener('click', () => { toggleMute(); updateSoundButton(); });
 document.querySelectorAll<HTMLButtonElement>('[data-direction]').forEach((button) => {
-  button.addEventListener('pointerdown', (event) => { event.preventDefault(); unlockAudio(); button.classList.add('pressed'); playSound('move'); emitMove(button.dataset.direction as Direction); });
-  ['pointerup', 'pointercancel', 'pointerleave'].forEach((name) => button.addEventListener(name, () => button.classList.remove('pressed')));
+  button.addEventListener('pointerdown', (event) => {
+    event.preventDefault(); stopHeldMove(); unlockAudio(); button.classList.add('pressed');
+    const direction = button.dataset.direction as Direction;
+    const moveOnce = (withSound = false) => { if (withSound) playSound('move'); emitMove(direction); };
+    moveOnce(true);
+    try { button.setPointerCapture?.(event.pointerId); } catch { /* Synthetic and legacy pointer events need no capture. */ }
+    holdDelayTimer = window.setTimeout(() => { holdRepeatTimer = window.setInterval(() => moveOnce(), 155); }, 280);
+  });
+  ['pointerup', 'pointercancel', 'lostpointercapture', 'pointerleave'].forEach((name) => button.addEventListener(name, () => { stopHeldMove(); button.classList.remove('pressed'); }));
 });
 document.addEventListener('keydown', (event) => { if (event.repeat) return; const map: Record<string, Direction> = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' }; if (map[event.key]) { event.preventDefault(); emitMove(map[event.key]); } });
 
@@ -192,9 +207,15 @@ const renderStickerBook = () => {
   const scoreValues = Object.values(slot.scores);
   const collected = scoreValues.length;
   const sparkling = scoreValues.filter((score) => score.stars >= 3).length;
-  stickerSummary.textContent = `${collected} / ${stickers.length}　✨ ${sparkling}`;
   const pageStickers = stickers.slice(stickerPage * 10, stickerPage * 10 + 10);
+  const pageCollected = pageStickers.filter((sticker) => slot.scores[String(sticker.stageId)]).length;
+  const pageSparkling = pageStickers.filter((sticker) => slot.scores[String(sticker.stageId)]?.stars === 3).length;
+  stickerBook.style.setProperty('--book-accent', pageStickers[0]?.accent ?? '#b7e5a4');
+  stickerSummary.innerHTML = `<span class="collection-total">${collected}<small> / ${stickers.length}</small></span><span class="collection-label">あつめたよ</span><span class="collection-sparkle">✨ ${sparkling}</span>`;
   stickerPageLabel.textContent = pageStickers[0]?.pageName ?? '';
+  stickerPageLabel.dataset.count = `${pageCollected} / 10　✨ ${pageSparkling}`;
+  (document.querySelector('#sticker-prev') as HTMLButtonElement).disabled = stickerPage === 0;
+  (document.querySelector('#sticker-next') as HTMLButtonElement).disabled = stickerPage >= Math.ceil(stickers.length / 10) - 1;
   stickerGrid.replaceChildren();
   stickerDetail.hidden = true;
   pageStickers.forEach((sticker) => {
@@ -204,13 +225,14 @@ const renderStickerBook = () => {
     card.type = 'button';
     card.className = `sticker-item${score ? ' collected' : ' uncollected'}${score?.stars >= 3 ? ' sparkling' : ''}${!unlocked ? ' locked' : ''}`;
     card.style.setProperty('--sticker-accent', sticker.accent);
+    card.setAttribute('aria-label', score ? `ステージ ${sticker.stageId} ${sticker.name}、星 ${score.stars} 個` : `ステージ ${sticker.stageId} ${unlocked ? 'まだクリアしていない' : 'まだ解放されていない'}`);
     card.innerHTML = score
-      ? `<span class="sticker-art">${sticker.motif}</span><strong>${sticker.stageId}</strong><small>${score.stars >= 3 ? '✨' : `⭐ ${score.stars}`}</small>`
-      : `<span class="sticker-art">${unlocked ? sticker.motif : '🔒'}</span><strong>${sticker.stageId}</strong><small>${unlocked ? 'タップしてね' : 'まだだよ'}</small>`;
+      ? `<span class="sticker-number">${sticker.stageId}</span><span class="sticker-art">${sticker.motif}</span><span class="sticker-shine">✨</span><strong>${sticker.name}</strong><small>${score.stars >= 3 ? 'キラキラ！' : `⭐ ${score.stars} / 3`}</small>`
+      : `<span class="sticker-number">${sticker.stageId}</span><span class="sticker-art ghost">${unlocked ? sticker.motif : '🔒'}</span><strong>${unlocked ? '？のシール' : 'ひみつのシール'}</strong><small>${unlocked ? 'タップして あそぼう' : 'まだだよ'}</small>`;
     card.addEventListener('click', () => {
       if (!unlocked) return;
       stickerDetail.hidden = false;
-      stickerDetail.innerHTML = `<strong>ステージ ${sticker.stageId}　${sticker.name}</strong><span>${score ? `⭐ ${score.stars} / 3` : 'まだクリアしていないよ'}</span>`;
+      stickerDetail.innerHTML = `<span class="detail-art">${sticker.motif}</span><strong>ステージ ${sticker.stageId}　${sticker.name}</strong><span>${score ? `⭐ ${score.stars} / 3` : 'まだクリアしていないよ'}</span>`;
       if (!score) {
         const go = document.createElement('button'); go.type = 'button'; go.textContent = 'このステージへ';
         go.addEventListener('click', () => { stickerBook.hidden = true; loadStage(sticker.stageId); });
