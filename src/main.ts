@@ -225,9 +225,10 @@ const renderStickerBook = () => {
     card.type = 'button';
     card.className = `sticker-item${score ? ' collected' : ' uncollected'}${score?.stars >= 3 ? ' sparkling' : ''}${!unlocked ? ' locked' : ''}`;
     card.style.setProperty('--sticker-accent', sticker.accent);
+    card.style.setProperty('--sticker-secondary', sticker.secondary);
     card.setAttribute('aria-label', score ? `ステージ ${sticker.stageId} ${sticker.name}、星 ${score.stars} 個` : `ステージ ${sticker.stageId} ${unlocked ? 'まだクリアしていない' : 'まだ解放されていない'}`);
     card.innerHTML = score
-      ? `<span class="sticker-number">${sticker.stageId}</span><span class="sticker-art">${sticker.motif}</span><span class="sticker-shine">✨</span><strong>${sticker.name}</strong><small>${score.stars >= 3 ? 'キラキラ！' : `⭐ ${score.stars} / 3`}</small>`
+      ? `<span class="sticker-number">${sticker.stageId}</span><span class="sticker-art">${sticker.motif}</span>${score.stars >= 3 ? '<span class="perfect-crown">👑</span><span class="perfect-seal"><i>★</i><b>★★★</b></span><span class="sticker-shine">✨</span>' : ''}<strong>${sticker.name}</strong><small>${score.stars >= 3 ? 'パーフェクト！' : `⭐ ${score.stars} / 3`}</small>`
       : `<span class="sticker-number">${sticker.stageId}</span><span class="sticker-art ghost">${unlocked ? sticker.motif : '🔒'}</span><strong>${unlocked ? '？のシール' : 'ひみつのシール'}</strong><small>${unlocked ? 'タップして あそぼう' : 'まだだよ'}</small>`;
     card.addEventListener('click', () => {
       if (!unlocked) return;

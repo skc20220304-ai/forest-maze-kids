@@ -85,7 +85,7 @@ const lateStageBlueprints = [
   3117, 3284, 3391, 3468, 3593, 3614, 3747, 3826, 3953, 4084,
   4117, 4284, 4391, 4468, 4593, 4614, 4747, 4826, 4953, 5084,
 ] as const;
-const createLateStage = (seed: number, index: number): StageDefinition => {
+const createLateStage = (seed: number, id: number): StageDefinition => {
   const random = makeRandom(seed);
   const cells = Array.from({ length: 15 }, () => Array.from({ length: 15 }, () => '#'));
   const graph = new Map<string, Node[]>();
@@ -106,17 +106,31 @@ const createLateStage = (seed: number, index: number): StageDefinition => {
     stack.push(next);
   }
   const first = distance(root, graph)[0];
-  const [goal, longest] = distance(first, graph);
+  const [goal] = distance(first, graph);
   const leaves = [...graph.entries()].filter(([, links]) => links.length === 1).map(([key]) => { const [row, col] = key.split(':').map(Number); return { row, col }; });
   const starCandidates = leaves.filter(node => nodeKey(node) !== nodeKey(first) && nodeKey(node) !== nodeKey(goal));
   const fallback = [...graph.keys()].map(key => { const [row, col] = key.split(':').map(Number); return { row, col }; }).filter(node => nodeKey(node) !== nodeKey(first) && nodeKey(node) !== nodeKey(goal));
   const stars = (starCandidates.length >= 3 ? shuffled(starCandidates, random) : shuffled(fallback, random)).slice(0, 3);
   cells[first.row][first.col] = 'S'; cells[goal.row][goal.col] = 'G';
-  return { id: index + 51, difficulty: index + 51, rows: 15, columns: 15, layout: cells.map(row => row.join('')), playerStart: first, goal, stars };
+  return { id, difficulty: id, rows: 15, columns: 15, layout: cells.map(row => row.join('')), playerStart: first, goal, stars };
 };
-const lateStages: readonly StageDefinition[] = lateStageBlueprints.map((seed, index) => createLateStage(seed, index));
+const lateStages: readonly StageDefinition[] = lateStageBlueprints.map((seed, index) => createLateStage(seed, index + 51));
 
-export const stages: readonly StageDefinition[] = [...baseStages.map((stage, index) => ({ ...stage, difficulty: index + 1 })), ...bonusStages, ...lateStages];
+/**
+ * Fixed, independently seeded blueprints for stages 101-150.  These are not
+ * rotations or reflections of earlier mazes; each is checked at build time for
+ * a reachable goal, three collectible stars, and a one-way goal endpoint.
+ */
+const advancedStageBlueprints = [
+  6117, 6284, 6391, 6468, 6593, 6614, 6747, 6826, 6953, 7084,
+  7117, 7284, 7391, 7468, 7593, 7614, 7747, 7826, 7953, 8084,
+  8117, 8284, 8391, 8468, 8593, 8614, 8747, 8826, 8953, 9084,
+  9117, 9284, 9391, 9468, 9593, 9614, 9747, 9826, 9953, 10084,
+  10117, 10284, 10391, 10468, 10593, 10614, 10747, 10826, 10953, 11084,
+] as const;
+const advancedStages: readonly StageDefinition[] = advancedStageBlueprints.map((seed, index) => createLateStage(seed, index + 101));
+
+export const stages: readonly StageDefinition[] = [...baseStages.map((stage, index) => ({ ...stage, difficulty: index + 1 })), ...bonusStages, ...lateStages, ...advancedStages];
 
 const invalidStages=stages.filter(stage=>!validateStage(stage));
 if(invalidStages.length>0)throw new Error(`Invalid maze stage(s): ${invalidStages.map(stage=>stage.id).join(', ')}`);
